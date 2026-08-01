@@ -7,7 +7,7 @@ const handlers = {};
 export async function connect(token) {
   savedToken = token;
   return new Promise((resolve) => {
-    const base = (import.meta.env.VITE_SERVER_URL || 'http://localhost:3000')
+    const base = (import.meta.env.VITE_SERVER_URL || window.location.origin)
       .replace(/^http:/, 'ws:')
       .replace(/^https:/, 'wss:');
 

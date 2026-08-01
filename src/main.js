@@ -26,7 +26,7 @@ function showOverlay(id) {
 }
 
 // ── OAuth login ────────────────────────────────────────────────────────────
-const SERVER = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+const SERVER = import.meta.env.VITE_SERVER_URL || window.location.origin;
 
 function openOAuth(provider) {
   const popup = window.open(`${SERVER}/auth/${provider}`, 'auth', 'width=560,height=680,resizable=yes');
