@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>MapCall — Авторизация</title>
+  <style>
+    body { background:#1a1a2e; color:#fff; font-family:sans-serif;
+           display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
+    p { font-size:1.1rem; opacity:.7; }
+  </style>
+</head>
+<body>
+  <p>Выполняется авторизация…</p>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const error = params.get('error');
+    if (window.opener) {
+      if (token) window.opener.postMessage({ type: 'auth-token', token }, '*');
+      else        window.opener.postMessage({ type: 'auth-error', error }, '*');
+      window.close();
+    } else {
+      // Fallback: store token and redirect to main page
+      if (token) { localStorage.setItem('mapcall_token', token); window.location.href = './'; }
+    }
+  </script>
+</body>
+</html>

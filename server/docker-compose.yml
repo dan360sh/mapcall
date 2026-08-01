@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mapcall
+      POSTGRES_USER: mapcall
+      POSTGRES_PASSWORD: mapcallpass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mapcall"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mapcall:mapcallpass@postgres:5432/mapcall
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Mount built frontend so it's served by the Node server
+      - ../www:/app/www:ro
+
+volumes:
+  pgdata:

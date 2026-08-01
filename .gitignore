@@ -1,0 +1,6 @@
+node_modules/
+www/
+release/
+android/
+.env
+*.env.local

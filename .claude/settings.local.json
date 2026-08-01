@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(multiplatform-app)",
+      "PowerShell(Get-ChildItem -Recurse -Path C:\\\\mapcoll | Where-Object { !$_.FullName.Contains\\('node_modules'\\) -and !$_.FullName.Contains\\('\\\\www\\\\'\\) } | Select-Object -ExpandProperty FullName | Sort-Object)"
+    ]
+  }
+}
