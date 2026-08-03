@@ -204,9 +204,10 @@ wss.on('connection', (ws) => {
             { type: 'user-appeared', data: { id: userId, name: u.name, avatar: u.avatar, lat: u.lat, lng: u.lng } },
             userId
           );
-        } else {
+        } else if (!data.visible) {
           broadcast({ type: 'user-disappeared', data: { id: userId } }, userId);
         }
+        // visible=true but no GPS yet → wait for update-location to broadcast user-appeared
         break;
       }
 

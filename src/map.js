@@ -17,6 +17,14 @@ export async function initMap() {
     zoom: 5,
     controls: ['zoomControl'],
   });
+
+  navigator.geolocation?.getCurrentPosition(
+    ({ coords }) => {
+      if (ymap) ymap.setCenter([coords.latitude, coords.longitude], 14);
+    },
+    () => {},
+    { timeout: 8000, maximumAge: 60000 }
+  );
 }
 
 function loadYandexMaps(apiKey) {
