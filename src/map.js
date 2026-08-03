@@ -12,38 +12,20 @@ export function setOnMarkerClick(cb) {
 export async function initMap() {
   await loadYandexMaps(import.meta.env.VITE_YANDEX_MAPS_KEY || '');
 
-  // Получаем геолокацию ДО создания карты — как в примере из документации
-  const mapEl = document.getElementById('ymap');
-  let center = [55.7558, 37.6173];
-  let zoom = 10;
-
-  try {
-    const result = await Promise.race([
-      ymaps.geolocation.get({ provider: 'yandex' }),
-      new Promise((_, rej) => setTimeout(rej, 4000)),
-    ]);
-    const bounds = result.geoObjects.get(0)?.properties.get('boundedBy');
-    if (bounds) {
-      const state = ymaps.util.bounds.getCenterAndZoom(
-        bounds, [mapEl.offsetWidth || 800, mapEl.offsetHeight || 600]
-      );
-      center = state.center;
-      zoom = Math.min(state.zoom, 12);
-    }
-  } catch {
-    // Yandex IP не сработал — пробуем браузерный GPS
-    await new Promise((resolve) => {
-      if (!navigator.geolocation) { resolve(); return; }
-      navigator.geolocation.getCurrentPosition(
-        ({ coords }) => { center = [coords.latitude, coords.longitude]; zoom = 14; resolve(); },
-        () => resolve(),
-        { timeout: 6000, maximumAge: 60000 }
-      );
-    });
-  }
-
-  ymap = new ymaps.Map('ymap', { center, zoom, controls: ['zoomControl'] });
+  // Карта создаётся сразу — без ожидания геолокации
+  ymap = new ymaps.Map('ymap', { center: [55.7558, 37.6173], zoom: 10, controls: ['zoomControl'] });
   window.__ymap = ymap;
+
+  // Геолокация асинхронно — когда придёт, центрируем карту
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        ymap.setCenter([coords.latitude, coords.longitude], 15, { duration: 500 });
+      },
+      () => {},
+      { timeout: 10000, maximumAge: 60000 }
+    );
+  }
 }
 
 function loadYandexMaps(apiKey) {
