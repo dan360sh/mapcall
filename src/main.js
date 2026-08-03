@@ -1,5 +1,5 @@
 import { connect, send, on } from './signaling.js';
-import { initMap, updateUsers, removeUserMarker, setOnMarkerClick } from './map.js';
+import { initMap, updateUsers, removeUserMarker, setOnMarkerClick, showMyMarker, hideMyMarker } from './map.js';
 import { initCall, acceptCall, endCall } from './call.js';
 import { hideAllArrows } from './arrows.js';
 
@@ -95,12 +95,16 @@ $('btn-toggle-visible').addEventListener('click', () => {
 
   if (isVisible) {
     watchId = navigator.geolocation?.watchPosition(
-      ({ coords }) => send('update-location', { lat: coords.latitude, lng: coords.longitude }),
-      null,
+      ({ coords }) => {
+        send('update-location', { lat: coords.latitude, lng: coords.longitude });
+        showMyMarker(coords.latitude, coords.longitude);
+      },
+      (err) => console.warn('Geolocation error:', err),
       { enableHighAccuracy: true, maximumAge: 5000 }
     );
   } else {
     if (watchId != null) { navigator.geolocation?.clearWatch(watchId); watchId = null; }
+    hideMyMarker();
   }
 });
 

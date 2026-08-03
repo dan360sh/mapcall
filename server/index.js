@@ -178,10 +178,19 @@ wss.on('connection', (ws) => {
       case 'update-location': {
         const u = online.get(userId);
         if (!u) return;
+        const firstFix = u.lat === null;
         u.lat = data.lat;
         u.lng = data.lng;
         if (u.visible) {
-          broadcast({ type: 'user-moved', data: { id: userId, lat: data.lat, lng: data.lng } }, userId);
+          if (firstFix) {
+            // First location received while visible — announce appearance
+            broadcast(
+              { type: 'user-appeared', data: { id: userId, name: u.name, avatar: u.avatar, lat: data.lat, lng: data.lng } },
+              userId
+            );
+          } else {
+            broadcast({ type: 'user-moved', data: { id: userId, lat: data.lat, lng: data.lng } }, userId);
+          }
         }
         break;
       }

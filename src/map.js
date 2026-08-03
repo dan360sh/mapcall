@@ -2,6 +2,7 @@
 
 let ymap = null;
 const markers = {}; // userId → ymaps.Placemark
+let myMarker = null;
 let markerClickCb = null;
 
 export function setOnMarkerClick(cb) {
@@ -83,5 +84,30 @@ export function removeUserMarker(userId) {
   if (markers[userId]) {
     ymap.geoObjects.remove(markers[userId]);
     delete markers[userId];
+  }
+}
+
+export function showMyMarker(lat, lng) {
+  if (!ymap) return;
+  if (myMarker) {
+    myMarker.geometry.setCoordinates([lat, lng]);
+    return;
+  }
+  myMarker = new ymaps.Placemark(
+    [lat, lng],
+    { hintContent: 'Я' },
+    {
+      preset: 'islands#blueCircleIcon',
+      iconColor: '#4a90e2',
+    }
+  );
+  ymap.geoObjects.add(myMarker);
+  ymap.setCenter([lat, lng], 15);
+}
+
+export function hideMyMarker() {
+  if (myMarker && ymap) {
+    ymap.geoObjects.remove(myMarker);
+    myMarker = null;
   }
 }
