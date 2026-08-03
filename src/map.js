@@ -13,14 +13,9 @@ export async function initMap() {
   await loadYandexMaps(import.meta.env.VITE_YANDEX_MAPS_KEY || '');
 
   ymap = new ymaps.Map('ymap', {
-    center: [55.7558, 37.6173], // Moscow default
-    zoom: 11,
-    controls: ['zoomControl', 'geolocationControl'],
-  });
-
-  // Center on user's actual location
-  navigator.geolocation?.getCurrentPosition(({ coords }) => {
-    ymap.setCenter([coords.latitude, coords.longitude], 13);
+    center: [55.7558, 37.6173],
+    zoom: 5,
+    controls: ['zoomControl'],
   });
 }
 

@@ -224,8 +224,11 @@ window.__callUser = (userId, userName) => {
 async function startApp(token) {
   showScreen('screen-map');
   wireSignaling();
-
   initCall({ onHangup: hangup });
+
+  // Map must be ready BEFORE WebSocket connects — otherwise users-list
+  // arrives while ymap is still null and updateUsers silently does nothing
+  await initMap();
 
   const ok = await connect(token);
   if (!ok) {
@@ -233,8 +236,6 @@ async function startApp(token) {
     showScreen('screen-login');
     return;
   }
-
-  await initMap();
 }
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────
