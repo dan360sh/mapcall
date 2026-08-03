@@ -106,6 +106,16 @@ app.get('/auth/google/callback', async (req, res) => {
   }
 });
 
+// ── Guest auth ────────────────────────────────────────────────────────────────
+
+app.post('/auth/guest', (req, res) => {
+  const name = (req.body.name || '').trim().slice(0, 32);
+  if (!name) return res.status(400).json({ error: 'Name required' });
+  const userId = `guest:${Math.random().toString(36).slice(2)}`;
+  const token = jwt.sign({ userId, name, avatar: null }, JWT_SECRET, { expiresIn: '24h' });
+  res.json({ token });
+});
+
 // ── WebSocket signaling ────────────────────────────────────────────────────────
 
 // In-memory realtime state (location + visibility)

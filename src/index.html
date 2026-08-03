@@ -35,6 +35,13 @@
         Войти через Google
       </button>
 
+      <div class="divider"><span>или</span></div>
+
+      <div id="guest-form" class="guest-form">
+        <input id="guest-name" class="guest-input" type="text" placeholder="Введите имя" maxlength="32" />
+        <button id="btn-guest-submit" class="oauth-btn oauth-guest">Войти</button>
+      </div>
+
       <p id="login-error" class="login-error hidden">Ошибка авторизации. Попробуйте снова.</p>
     </div>
   </div>
@@ -47,6 +54,7 @@
     <div class="user-badge">
       <img id="user-avatar" class="avatar-sm" src="" alt="" />
       <span id="user-name">...</span>
+      <button id="btn-logout" class="btn-logout" title="Выйти">✕</button>
     </div>
 
     <!-- Show-on-map toggle (bottom-center) -->

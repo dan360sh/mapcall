@@ -50,6 +50,34 @@ function openOAuth(provider) {
 $('btn-yandex').addEventListener('click', () => openOAuth('yandex'));
 $('btn-google').addEventListener('click', () => openOAuth('google'));
 
+// Guest login
+async function loginAsGuest() {
+  const name = $('guest-name').value.trim();
+  if (!name) { $('guest-name').focus(); return; }
+  try {
+    const resp = await fetch(`${SERVER}/auth/guest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!resp.ok) throw new Error();
+    const { token } = await resp.json();
+    localStorage.setItem('mapcall_token', token);
+    startApp(token);
+  } catch {
+    $('login-error').classList.remove('hidden');
+  }
+}
+
+$('btn-guest-submit').addEventListener('click', loginAsGuest);
+$('guest-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') loginAsGuest(); });
+
+// Logout
+$('btn-logout').addEventListener('click', () => {
+  localStorage.removeItem('mapcall_token');
+  location.reload();
+});
+
 // Electron: token arrives via IPC
 window.electronAPI?.on('auth-token', (token) => {
   localStorage.setItem('mapcall_token', token);
