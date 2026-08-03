@@ -6,6 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root: 'src',
+  envDir: __dirname,
   base: './',
   build: {
     outDir: '../www',
