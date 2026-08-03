@@ -17,6 +17,7 @@ export async function initMap() {
     zoom: 5,
     controls: ['zoomControl'],
   });
+  window.__ymap = ymap;
 
   navigator.geolocation?.getCurrentPosition(
     ({ coords }) => {
