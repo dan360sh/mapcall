@@ -20,7 +20,15 @@ export async function initMap() {
   window.__ymap = ymap;
 
   // IP-геолокация через Яндекс — не требует разрешения браузера
-  ymaps.geolocation.get({ provider: 'yandex', mapStateAutoApply: true }).catch(() => {});
+  ymaps.geolocation.get({ provider: 'yandex' }).then((result) => {
+    if (!ymap) return;
+    const mapEl = document.getElementById('ymap');
+    const bounds = result.geoObjects.get(0)?.properties.get('boundedBy');
+    if (bounds && mapEl.offsetWidth) {
+      const state = ymaps.util.bounds.getCenterAndZoom(bounds, [mapEl.offsetWidth, mapEl.offsetHeight]);
+      ymap.setCenter(state.center, Math.min(state.zoom, 12));
+    }
+  }, () => {});
 }
 
 function loadYandexMaps(apiKey) {
