@@ -32,15 +32,14 @@ export async function initMap() {
     }
   } catch {
     // Yandex IP не сработал — пробуем браузерный GPS
-    try {
-      await new Promise((resolve) => {
-        navigator.geolocation?.getCurrentPosition(
-          ({ coords }) => { center = [coords.latitude, coords.longitude]; zoom = 14; resolve(); },
-          () => resolve(),
-          { timeout: 6000, maximumAge: 60000 }
-        ) ?? resolve();
-      });
-    } catch { /* оставляем Москву */ }
+    await new Promise((resolve) => {
+      if (!navigator.geolocation) { resolve(); return; }
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => { center = [coords.latitude, coords.longitude]; zoom = 14; resolve(); },
+        () => resolve(),
+        { timeout: 6000, maximumAge: 60000 }
+      );
+    });
   }
 
   ymap = new ymaps.Map('ymap', { center, zoom, controls: ['zoomControl'] });
