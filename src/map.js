@@ -19,13 +19,8 @@ export async function initMap() {
   });
   window.__ymap = ymap;
 
-  navigator.geolocation?.getCurrentPosition(
-    ({ coords }) => {
-      if (ymap) ymap.setCenter([coords.latitude, coords.longitude], 14);
-    },
-    () => {},
-    { timeout: 8000, maximumAge: 60000 }
-  );
+  // IP-геолокация через Яндекс — не требует разрешения браузера
+  ymaps.geolocation.get({ provider: 'yandex', mapStateAutoApply: true }).catch(() => {});
 }
 
 function loadYandexMaps(apiKey) {
