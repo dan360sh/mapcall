@@ -12,18 +12,17 @@ export function setOnMarkerClick(cb) {
 export async function initMap() {
   await loadYandexMaps(import.meta.env.VITE_YANDEX_MAPS_KEY || '');
 
-  // Карта создаётся сразу — без ожидания геолокации
   ymap = new ymaps.Map('ymap', { center: [55.7558, 37.6173], zoom: 10, controls: ['zoomControl'] });
   window.__ymap = ymap;
 
-  // Геолокация асинхронно — когда придёт, центрируем карту
+  // Асинхронно центрируем на реальном местоположении (без кеша)
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         ymap.setCenter([coords.latitude, coords.longitude], 15, { duration: 500 });
       },
       () => {},
-      { timeout: 10000, maximumAge: 60000 }
+      { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
     );
   }
 }
@@ -70,9 +69,7 @@ export function updateUsers(users, merge = false) {
             </button>
           </div>`,
       },
-      {
-        preset: 'islands#bluePersonIcon',
-      }
+      { preset: 'islands#bluePersonIcon' }
     );
 
     pm.events.add('click', () => {
@@ -99,14 +96,10 @@ export function showMyMarker(lat, lng) {
   }
   myMarker = new ymaps.Placemark(
     [lat, lng],
-    { hintContent: 'Я' },
-    {
-      preset: 'islands#blueCircleIcon',
-      iconColor: '#4a90e2',
-    }
+    { iconContent: 'Я', hintContent: 'Моё местоположение' },
+    { preset: 'islands#blueStretchyIcon', zIndex: 1000 }
   );
   ymap.geoObjects.add(myMarker);
-  ymap.setCenter([lat, lng], 15);
 }
 
 export function hideMyMarker() {
@@ -114,4 +107,10 @@ export function hideMyMarker() {
     ymap.geoObjects.remove(myMarker);
     myMarker = null;
   }
+}
+
+export function panToMyMarker() {
+  if (!ymap || !myMarker) return;
+  const coords = myMarker.geometry.getCoordinates();
+  ymap.setCenter(coords, 15, { duration: 400 });
 }

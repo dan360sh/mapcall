@@ -1,5 +1,5 @@
 import { connect, send, on } from './signaling.js';
-import { initMap, updateUsers, removeUserMarker, setOnMarkerClick, showMyMarker, hideMyMarker } from './map.js';
+import { initMap, updateUsers, removeUserMarker, setOnMarkerClick, showMyMarker, hideMyMarker, panToMyMarker } from './map.js';
 import { initCall, acceptCall, endCall } from './call.js';
 import { hideAllArrows } from './arrows.js';
 
@@ -8,6 +8,8 @@ let myUserId = null;
 let callState = 'idle';   // idle | calling | receiving | active
 let callPeer = null;      // userId of the other party
 let watchId = null;
+let myLat = null;
+let myLng = null;
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -84,6 +86,24 @@ window.electronAPI?.on('auth-token', (token) => {
   startApp(token);
 });
 
+// ── Coordinates display ────────────────────────────────────────────────────
+function updateCoordsDisplay(lat, lng) {
+  const panel = $('coords-panel');
+  if (!panel) return;
+  const latStr = lat.toFixed(6);
+  const lngStr = lng.toFixed(6);
+  $('coords-text').textContent = `${latStr}, ${lngStr}`;
+  panel.classList.remove('hidden');
+}
+
+$('btn-copy-coords').addEventListener('click', () => {
+  const text = $('coords-text').textContent;
+  navigator.clipboard?.writeText(text).then(() => {
+    $('btn-copy-coords').textContent = '✓';
+    setTimeout(() => { $('btn-copy-coords').textContent = '⎘'; }, 1500);
+  });
+});
+
 // ── Toggle visibility on map ───────────────────────────────────────────────
 let isVisible = false;
 
@@ -93,20 +113,34 @@ $('btn-toggle-visible').addEventListener('click', () => {
   $('toggle-label').textContent = isVisible ? 'Скрыться с карты' : 'Показаться на карте';
   send('toggle-visible', { visible: isVisible });
 
-  if (isVisible) {
-    watchId = navigator.geolocation?.watchPosition(
-      ({ coords }) => {
-        send('update-location', { lat: coords.latitude, lng: coords.longitude });
-        showMyMarker(coords.latitude, coords.longitude);
-      },
-      (err) => console.warn('Geolocation error:', err),
-      { enableHighAccuracy: true, maximumAge: 5000 }
-    );
-  } else {
-    if (watchId != null) { navigator.geolocation?.clearWatch(watchId); watchId = null; }
-    hideMyMarker();
+  // Если включили видимость и уже есть координаты — сразу сообщаем серверу
+  if (isVisible && myLat !== null) {
+    send('update-location', { lat: myLat, lng: myLng });
   }
 });
+
+// ── "Где я" button ─────────────────────────────────────────────────────────
+$('btn-locate-me').addEventListener('click', () => {
+  panToMyMarker();
+});
+
+// ── GPS watching (всегда активен после логина) ─────────────────────────────
+function startGpsWatch() {
+  if (!navigator.geolocation) return;
+  watchId = navigator.geolocation.watchPosition(
+    ({ coords }) => {
+      myLat = coords.latitude;
+      myLng = coords.longitude;
+      showMyMarker(myLat, myLng);
+      updateCoordsDisplay(myLat, myLng);
+      if (isVisible) {
+        send('update-location', { lat: myLat, lng: myLng });
+      }
+    },
+    (err) => console.warn('Geolocation error:', err),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+  );
+}
 
 // ── Incoming call ──────────────────────────────────────────────────────────
 $('btn-accept').addEventListener('click', () => {
@@ -182,7 +216,7 @@ function wireSignaling() {
   on('call-accepted', () => {
     if (callState !== 'calling') return;
     callState = 'active';
-    showOverlay('overlay-caller'); // caller sees video + joystick
+    showOverlay('overlay-caller');
   });
 
   on('call-rejected', () => {
@@ -210,7 +244,6 @@ setOnMarkerClick((userId, userName) => {
   send('call-request', { calleeId: userId });
 });
 
-// Expose for balloon button onclick
 window.__callUser = (userId, userName) => {
   if (callState !== 'idle' || userId === myUserId) return;
   callState = 'calling';
@@ -226,9 +259,8 @@ async function startApp(token) {
   wireSignaling();
   initCall({ onHangup: hangup });
 
-  // Map must be ready BEFORE WebSocket connects — otherwise users-list
-  // arrives while ymap is still null and updateUsers silently does nothing
   await initMap();
+  startGpsWatch();
 
   const ok = await connect(token);
   if (!ok) {

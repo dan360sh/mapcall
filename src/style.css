@@ -401,5 +401,60 @@ html, body {
   cursor: pointer;
 }
 
+/* ── "Где я" button ────────────────────────────────────────────────────────── */
+.locate-btn {
+  position: absolute;
+  bottom: 100px;
+  right: 14px;
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(15,15,30,.88);
+  color: #4a90e2;
+  border: 2px solid rgba(255,255,255,.18);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, transform .1s;
+}
+.locate-btn:active { transform: scale(.88); background: rgba(74,144,226,.3); }
+
+/* ── Coordinates panel ────────────────────────────────────────────────────── */
+.coords-panel {
+  position: absolute;
+  bottom: 32px;
+  left: 14px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15,15,30,.82);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  padding: 6px 10px;
+  backdrop-filter: blur(12px);
+  font-size: .78rem;
+  font-weight: 500;
+  color: rgba(255,255,255,.85);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-copy-coords {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.5);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color .15s;
+}
+.btn-copy-coords:hover { color: #4a90e2; }
+
 /* ── Utilities ────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
