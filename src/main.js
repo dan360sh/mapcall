@@ -127,18 +127,30 @@ $('btn-locate-me').addEventListener('click', () => {
 // ── GPS watching (всегда активен после логина) ─────────────────────────────
 function startGpsWatch() {
   if (!navigator.geolocation) return;
+  let centered = false;
+
   watchId = navigator.geolocation.watchPosition(
     ({ coords }) => {
+      // Игнорируем позиции точностью хуже 500м — это мусор от соты/IP
+      if (coords.accuracy > 500) return;
+
       myLat = coords.latitude;
       myLng = coords.longitude;
       showMyMarker(myLat, myLng);
       updateCoordsDisplay(myLat, myLng);
+
+      // Центрируем карту только на первом надёжном фиксе
+      if (!centered) {
+        centered = true;
+        window.__ymap?.setCenter([myLat, myLng], 15, { duration: 500 });
+      }
+
       if (isVisible) {
         send('update-location', { lat: myLat, lng: myLng });
       }
     },
     (err) => console.warn('Geolocation error:', err),
-    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+    { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
   );
 }
 

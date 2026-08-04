@@ -14,17 +14,6 @@ export async function initMap() {
 
   ymap = new ymaps.Map('ymap', { center: [55.7558, 37.6173], zoom: 10, controls: ['zoomControl'] });
   window.__ymap = ymap;
-
-  // Асинхронно центрируем на реальном местоположении (без кеша)
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        ymap.setCenter([coords.latitude, coords.longitude], 15, { duration: 500 });
-      },
-      () => {},
-      { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
-    );
-  }
 }
 
 function loadYandexMaps(apiKey) {
