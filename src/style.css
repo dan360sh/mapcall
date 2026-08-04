@@ -284,22 +284,35 @@ html, body {
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
+
+.joystick-handle {
+  text-align: center;
+  color: rgba(255,255,255,.35);
+  font-size: .75rem;
+  letter-spacing: .1em;
+  padding: 2px 0 6px;
+  cursor: grab;
+}
+.joystick-handle:active { cursor: grabbing; }
 
 .joystick {
   display: grid;
-  grid-template-columns: repeat(3, 72px);
-  grid-template-rows: repeat(3, 72px);
-  gap: 8px;
+  grid-template-columns: repeat(3, 50px);
+  grid-template-rows: repeat(3, 50px);
+  gap: 6px;
 }
 
 .joy {
-  width: 72px; height: 72px;
+  width: 50px; height: 50px;
   background: rgba(255,255,255,.14);
   border: 2px solid rgba(255,255,255,.28);
-  border-radius: 18px;
+  border-radius: 13px;
   color: #fff;
-  font-size: 1.6rem;
+  font-size: 1.2rem;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
@@ -317,7 +330,7 @@ html, body {
 .joy-fwd {
   background: rgba(74,144,226,.28);
   border-color: rgba(74,144,226,.5);
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
 .btn-hangup {
@@ -358,29 +371,23 @@ html, body {
   pointer-events: none;
   line-height: 1;
 }
+/* scale как отдельное свойство — не конфликтует с transform:translate() */
 .arrow.show {
   color: rgba(255,255,255,.78);
   text-shadow: 0 0 30px rgba(74,144,226,.9), 0 0 60px rgba(74,144,226,.4);
   animation: arrow-pop .25s ease;
 }
 @keyframes arrow-pop {
-  0%   { transform: scale(.7); }
-  60%  { transform: scale(1.15); }
-  100% { transform: scale(1); }
+  0%   { scale: .7; }
+  60%  { scale: 1.15; }
+  100% { scale: 1; }
 }
 
-.arr-up    { top: 60px;   left: 50%; transform: translateX(-50%); }
+.arr-up    { top: 60px;     left: 50%; transform: translateX(-50%); }
 .arr-down  { bottom: 110px; left: 50%; transform: translateX(-50%); }
-.arr-left  { left: 36px;  top: 50%;  transform: translateY(-50%); }
-.arr-right { right: 36px; top: 50%;  transform: translateY(-50%); }
-.arr-fwd   { top: 50%;    left: 50%; transform: translate(-50%,-50%); font-size:4rem; }
-
-/* When .show applied, keep the translate for positioning arrows */
-.arr-up.show    { transform: translateX(-50%); }
-.arr-down.show  { transform: translateX(-50%); }
-.arr-left.show  { transform: translateY(-50%); }
-.arr-right.show { transform: translateY(-50%); }
-.arr-fwd.show   { transform: translate(-50%,-50%); }
+.arr-left  { left: 36px;    top: 50%;  transform: translateY(-50%); }
+.arr-right { right: 36px;   top: 50%;  transform: translateY(-50%); }
+.arr-fwd   { top: 50%;      left: 50%; transform: translate(-50%,-50%); font-size:4rem; }
 
 .callee-bar {
   position: absolute;
