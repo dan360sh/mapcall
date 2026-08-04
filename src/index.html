@@ -122,8 +122,9 @@
     <button id="btn-hangup-caller" class="btn-hangup">Завершить</button>
   </div>
 
-  <!-- ── Active call: CALLEE view (arrow overlay) ──────────────────────────── -->
+  <!-- ── Active call: CALLEE view (own camera + arrow overlay) ────────────── -->
   <div id="overlay-callee" class="overlay hidden callee-overlay">
+    <video id="callee-video" autoplay playsinline muted></video>
     <div id="arrow-up"      class="arrow arr-up">▲</div>
     <div id="arrow-down"    class="arrow arr-down">▼</div>
     <div id="arrow-left"    class="arrow arr-left">◀</div>

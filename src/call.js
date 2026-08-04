@@ -59,15 +59,30 @@ export function initCall(opts = {}) {
 async function startAsCallee(callerId) {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false, // no audio on either side — caller is muted by design
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
     });
-  } catch (err) {
-    console.error('Camera access denied:', err);
-    send('hangup', { to: callerId });
-    cleanUp();
-    onHangupCb?.();
-    return;
+  } catch {
+    // Fallback — десктоп или устройство без задней камеры
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+    } catch (err) {
+      console.error('Camera access denied:', err);
+      send('hangup', { to: callerId });
+      cleanUp();
+      onHangupCb?.();
+      return;
+    }
+  }
+
+  // Показываем собственное видео каллии (чтобы видел что транслирует)
+  const calleeVid = document.getElementById('callee-video');
+  if (calleeVid) {
+    calleeVid.srcObject = localStream;
+    calleeVid.muted = true;
   }
 
   pc = buildPC('callee');
@@ -143,4 +158,6 @@ function cleanUp() {
   destroyJoystick();
   const vid = document.getElementById('remote-video');
   if (vid) vid.srcObject = null;
+  const calleeVid = document.getElementById('callee-video');
+  if (calleeVid) calleeVid.srcObject = null;
 }
