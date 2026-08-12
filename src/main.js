@@ -127,6 +127,9 @@ $('btn-toggle-visible').addEventListener('click', () => {
   localStorage.setItem('mapcall_visible', isVisible ? '1' : '0');
   applyVisibleUI();
   console.log('[App] toggle-visible:', isVisible, 'myLat:', myLat);
+  if (Capacitor.isNativePlatform()) {
+    CallNotification.setVisible({ visible: isVisible }).catch(() => {});
+  }
   send('toggle-visible', { visible: isVisible });
   if (isVisible && myLat !== null) {
     send('update-location', { lat: myLat, lng: myLng });
@@ -145,9 +148,17 @@ function setupCallNotifications() {
   CapApp.addListener('appStateChange', ({ isActive }) => {
     isAppActive = isActive;
     console.log('[App] appStateChange isActive=' + isActive);
-    // Когда приложение уходит в фон — сервис берёт WebSocket
-    // Когда возвращается — JS берёт WebSocket обратно
-    CallNotification.setJsWsActive({ active: isActive }).catch(() => {});
+    if (isActive) {
+      CallNotification.setJsWsActive({ active: true }).catch(() => {});
+    } else {
+      // Передаём текущее состояние — сервис восстановит видимость на карте
+      CallNotification.setJsWsActive({
+        active: false,
+        visible: isVisible,
+        lat: myLat,
+        lng: myLng,
+      }).catch(() => {});
+    }
   });
 }
 
@@ -335,6 +346,8 @@ async function startApp(token) {
 
   if (Capacitor.isNativePlatform()) {
     CallNotification.saveToken({ token }).catch(() => {});
+    // Синхронизируем visible из localStorage в SharedPreferences (для сервиса)
+    CallNotification.setVisible({ visible: isVisible }).catch(() => {});
     // Устанавливаем флаг ДО старта сервиса — он увидит jsWsActive=true
     // и не будет открывать свой WebSocket, конкурируя с JS
     await CallNotification.setJsWsActive({ active: true }).catch(() => {});
