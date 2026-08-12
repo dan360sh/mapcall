@@ -2,6 +2,12 @@ import { connect, send, on } from './signaling.js';
 import { initMap, updateUsers, removeUserMarker, setOnMarkerClick, showMyMarker, hideMyMarker, panToMyMarker } from './map.js';
 import { initCall, acceptCall, endCall } from './call.js';
 import { hideAllArrows } from './arrows.js';
+import { Geolocation } from '@capacitor/geolocation';
+import { registerPlugin } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+
+const CallNotification = registerPlugin('CallNotification');
 
 // ── App state ──────────────────────────────────────────────────────────────
 let myUserId = null;
@@ -10,6 +16,7 @@ let callPeer = null;      // userId of the other party
 let watchId = null;
 let myLat = null;
 let myLng = null;
+let isAppActive = true;   // false when app is backgrounded
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -76,7 +83,10 @@ $('guest-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') logi
 
 // Logout
 $('btn-logout').addEventListener('click', () => {
+  CallNotification.clearToken().catch(() => {});
+  CallNotification.stopBackground().catch(() => {});
   localStorage.removeItem('mapcall_token');
+  localStorage.removeItem('mapcall_visible');
   location.reload();
 });
 
@@ -105,15 +115,19 @@ $('btn-copy-coords').addEventListener('click', () => {
 });
 
 // ── Toggle visibility on map ───────────────────────────────────────────────
-let isVisible = false;
+let isVisible = localStorage.getItem('mapcall_visible') === '1';
+
+function applyVisibleUI() {
+  $('btn-toggle-visible').classList.toggle('active', isVisible);
+  $('toggle-label').textContent = isVisible ? 'Скрыться с карты' : 'Показаться на карте';
+}
 
 $('btn-toggle-visible').addEventListener('click', () => {
   isVisible = !isVisible;
-  $('btn-toggle-visible').classList.toggle('active', isVisible);
-  $('toggle-label').textContent = isVisible ? 'Скрыться с карты' : 'Показаться на карте';
+  localStorage.setItem('mapcall_visible', isVisible ? '1' : '0');
+  applyVisibleUI();
+  console.log('[App] toggle-visible:', isVisible, 'myLat:', myLat);
   send('toggle-visible', { visible: isVisible });
-
-  // Если включили видимость и уже есть координаты — сразу сообщаем серверу
   if (isVisible && myLat !== null) {
     send('update-location', { lat: myLat, lng: myLng });
   }
@@ -124,18 +138,51 @@ $('btn-locate-me').addEventListener('click', () => {
   panToMyMarker();
 });
 
+// ── Уведомления о звонках ──────────────────────────────────────────────────
+function setupCallNotifications() {
+  if (!Capacitor.isNativePlatform()) return;
+
+  CapApp.addListener('appStateChange', ({ isActive }) => {
+    isAppActive = isActive;
+    console.log('[App] appStateChange isActive=' + isActive);
+    // Когда приложение уходит в фон — сервис берёт WebSocket
+    // Когда возвращается — JS берёт WebSocket обратно
+    CallNotification.setJsWsActive({ active: isActive }).catch(() => {});
+  });
+}
+
+function showCallNotification(callerName) {
+  if (!Capacitor.isNativePlatform()) return;
+  CallNotification.showCallNotification({ callerName }).catch(console.warn);
+}
+
+function cancelCallNotification() {
+  if (!Capacitor.isNativePlatform()) return;
+  CallNotification.cancelCallNotification().catch(() => {});
+}
+
 // ── GPS watching (всегда активен после логина) ─────────────────────────────
-function startGpsWatch() {
-  if (!navigator.geolocation) return;
+async function startGpsWatch() {
+  // Запрашиваем разрешение явно — на Android показывает системный диалог
+  try {
+    await Geolocation.requestPermissions();
+  } catch (e) {
+    console.warn('Permission request failed:', e);
+  }
+
   let centered = false;
 
-  watchId = navigator.geolocation.watchPosition(
-    ({ coords }) => {
-      // Игнорируем позиции точностью хуже 500м — это мусор от соты/IP
-      if (coords.accuracy > 500) return;
+  watchId = await Geolocation.watchPosition(
+    { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 },
+    (position, err) => {
+      if (err || !position) { console.warn('Geolocation error:', err); return; }
+      const { latitude, longitude, accuracy } = position.coords;
 
-      myLat = coords.latitude;
-      myLng = coords.longitude;
+      // Игнорируем позиции точностью хуже 500м
+      if (accuracy > 500) return;
+
+      myLat = latitude;
+      myLng = longitude;
       showMyMarker(myLat, myLng);
       updateCoordsDisplay(myLat, myLng);
 
@@ -148,9 +195,7 @@ function startGpsWatch() {
       if (isVisible) {
         send('update-location', { lat: myLat, lng: myLng });
       }
-    },
-    (err) => console.warn('Geolocation error:', err),
-    { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+    }
   );
 }
 
@@ -167,6 +212,7 @@ $('btn-reject').addEventListener('click', () => {
   send('call-reject', { callerId: callPeer });
   callState = 'idle'; callPeer = null;
   showOverlay(null);
+  cancelCallNotification();
 });
 
 // ── Outgoing call ──────────────────────────────────────────────────────────
@@ -194,6 +240,14 @@ function wireSignaling() {
     myUserId = userId;
     $('user-name').textContent = name;
     $('user-avatar').src = avatar || '';
+    // JS WebSocket переподключился — сообщаем сервису чтобы не конкурировал
+    if (Capacitor.isNativePlatform()) {
+      CallNotification.setJsWsActive({ active: true }).catch(() => {});
+    }
+    if (isVisible) {
+      send('toggle-visible', { visible: true });
+      if (myLat !== null) send('update-location', { lat: myLat, lng: myLng });
+    }
   });
 
   on('auth-error', () => {
@@ -216,12 +270,14 @@ function wireSignaling() {
     $('caller-avatar').src = callerAvatar || '';
     $('caller-name').textContent = callerName;
     showOverlay('overlay-incoming');
+    showCallNotification(callerName);
   });
 
   on('call-cancelled', () => {
     if (callState === 'receiving') {
       callState = 'idle'; callPeer = null;
       showOverlay(null);
+      cancelCallNotification();
     }
   });
 
@@ -243,6 +299,7 @@ function wireSignaling() {
     hideAllArrows();
     callState = 'idle'; callPeer = null;
     showOverlay(null);
+    cancelCallNotification();
   });
 }
 
@@ -268,11 +325,21 @@ window.__callUser = (userId, userName) => {
 // ── Start app ──────────────────────────────────────────────────────────────
 async function startApp(token) {
   showScreen('screen-map');
+  applyVisibleUI();
+  setupCallNotifications();
   wireSignaling();
   initCall({ onHangup: hangup });
 
   await initMap();
   startGpsWatch();
+
+  if (Capacitor.isNativePlatform()) {
+    CallNotification.saveToken({ token }).catch(() => {});
+    // Устанавливаем флаг ДО старта сервиса — он увидит jsWsActive=true
+    // и не будет открывать свой WebSocket, конкурируя с JS
+    await CallNotification.setJsWsActive({ active: true }).catch(() => {});
+    CallNotification.startBackground().catch(() => {});
+  }
 
   const ok = await connect(token);
   if (!ok) {
@@ -280,6 +347,8 @@ async function startApp(token) {
     showScreen('screen-login');
     return;
   }
+
+  // Видимость восстанавливается в обработчике auth-ok (для reconnect тоже работает)
 }
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────

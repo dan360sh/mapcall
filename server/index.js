@@ -258,7 +258,11 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     if (!userId) return;
     const u = online.get(userId);
-    if (u?.visible) {
+    // Удаляем только если это именно тот WS, что сейчас в online-карте.
+    // Иначе другое соединение (напр. JS WebSocket) успело переавторизоваться
+    // и мы бы случайно убрали активного пользователя.
+    if (u?.ws !== ws) return;
+    if (u.visible) {
       broadcast({ type: 'user-disappeared', data: { id: userId } }, userId);
     }
     online.delete(userId);

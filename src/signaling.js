@@ -14,19 +14,22 @@ export async function connect(token) {
     ws = new WebSocket(`${base}/ws`);
 
     ws.onopen = () => {
+      console.log('[WS] opened, sending auth');
       ws.send(JSON.stringify({ type: 'auth', data: { token } }));
       resolve(true);
     };
 
-    ws.onerror = () => resolve(false);
+    ws.onerror = (e) => { console.log('[WS] error', e); resolve(false); };
 
     ws.onmessage = (e) => {
       let msg;
       try { msg = JSON.parse(e.data); } catch { return; }
+      console.log('[WS] msg:', msg.type, JSON.stringify(msg.data).slice(0, 80));
       (handlers[msg.type] || []).forEach(cb => cb(msg.data));
     };
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
+      console.log('[WS] closed code=' + e.code + ' reason=' + e.reason);
       if (savedToken) setTimeout(() => connect(savedToken), 3000);
     };
   });
