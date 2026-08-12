@@ -202,16 +202,17 @@ wss.on('connection', (ws) => {
       case 'toggle-visible': {
         const u = online.get(userId);
         if (!u) return;
+        const wasVisible = u.visible;
         u.visible = data.visible;
-        if (data.visible && u.lat !== null) {
+        if (data.visible && u.lat !== null && !wasVisible) {
+          // Только при переходе invisible → visible, иначе будет двойной user-appeared
           broadcast(
             { type: 'user-appeared', data: { id: userId, name: u.name, avatar: u.avatar, lat: u.lat, lng: u.lng } },
             userId
           );
-        } else if (!data.visible) {
+        } else if (!data.visible && wasVisible) {
           broadcast({ type: 'user-disappeared', data: { id: userId } }, userId);
         }
-        // visible=true but no GPS yet → wait for update-location to broadcast user-appeared
         break;
       }
 

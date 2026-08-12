@@ -247,7 +247,7 @@ $('btn-hangup-callee').addEventListener('click', hangup);
 
 // ── Signaling events ───────────────────────────────────────────────────────
 function wireSignaling() {
-  on('auth-ok', ({ userId, name, avatar }) => {
+  on('auth-ok', async ({ userId, name, avatar }) => {
     myUserId = userId;
     $('user-name').textContent = name;
     $('user-avatar').src = avatar || '';
@@ -258,6 +258,19 @@ function wireSignaling() {
     if (isVisible) {
       send('toggle-visible', { visible: true });
       if (myLat !== null) send('update-location', { lat: myLat, lng: myLng });
+    }
+    // Если приложение было закрыто во время входящего звонка — показываем overlay
+    if (Capacitor.isNativePlatform() && callState === 'idle') {
+      try {
+        const pending = await CallNotification.getPendingCall();
+        if (pending?.callerId) {
+          callPeer = pending.callerId;
+          callState = 'receiving';
+          $('caller-name').textContent = pending.callerName || '';
+          $('caller-avatar').src = pending.callerAvatar || '';
+          showOverlay('overlay-incoming');
+        }
+      } catch (_) {}
     }
   });
 
