@@ -119,7 +119,8 @@ app.post('/auth/guest', (req, res) => {
 // ── WebSocket signaling ────────────────────────────────────────────────────────
 
 // In-memory realtime state (location + visibility)
-const online = new Map(); // userId → { id, name, avatar, ws, lat, lng, visible }
+const online = new Map();      // userId → { id, name, avatar, ws, lat, lng, visible }
+const closeTimers = new Map(); // userId → timeout — grace period при reconnect
 
 function sendTo(userId, data) {
   const u = online.get(userId);
@@ -157,6 +158,9 @@ wss.on('connection', (ws) => {
         try {
           const payload = jwt.verify(data.token, JWT_SECRET);
           userId = payload.userId;
+          // Отменяем таймер удаления — это reconnect, не отключение
+          const t = closeTimers.get(userId);
+          if (t) { clearTimeout(t); closeTimers.delete(userId); }
           const prev = online.get(userId);
           online.set(userId, {
             id: userId,
@@ -258,14 +262,17 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     if (!userId) return;
     const u = online.get(userId);
-    // Удаляем только если это именно тот WS, что сейчас в online-карте.
-    // Иначе другое соединение (напр. JS WebSocket) успело переавторизоваться
-    // и мы бы случайно убрали активного пользователя.
     if (u?.ws !== ws) return;
-    if (u.visible) {
-      broadcast({ type: 'user-disappeared', data: { id: userId } }, userId);
-    }
-    online.delete(userId);
+    // Grace period: ждём 3 сек перед удалением — сервис успеет переподключиться
+    // без моргания пользователя на карте у других клиентов.
+    const timer = setTimeout(() => {
+      const u2 = online.get(userId);
+      if (!u2 || u2.ws !== ws) return; // уже переподключился
+      if (u2.visible) broadcast({ type: 'user-disappeared', data: { id: userId } }, userId);
+      online.delete(userId);
+      closeTimers.delete(userId);
+    }, 3000);
+    closeTimers.set(userId, timer);
   });
 });
 
