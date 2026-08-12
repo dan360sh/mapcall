@@ -269,6 +269,7 @@ function wireSignaling() {
           $('caller-name').textContent = pending.callerName || '';
           $('caller-avatar').src = pending.callerAvatar || '';
           showOverlay('overlay-incoming');
+          showCallNotification(pending.callerName || ''); // ringtone + уведомление
         }
       } catch (_) {}
     }
