@@ -230,8 +230,29 @@ $('btn-reject').addEventListener('click', () => {
 });
 
 // ── Outgoing call ──────────────────────────────────────────────────────────
+let callTimeout = null;
+
+function startCall(userId, userName) {
+  if (callState !== 'idle' || userId === myUserId) return;
+  callState = 'calling';
+  callPeer = userId;
+  $('callee-name').textContent = userName;
+  showOverlay('overlay-calling');
+  send('call-request', { calleeId: userId });
+  // Авто-отмена если никто не ответил за 45 секунд
+  clearTimeout(callTimeout);
+  callTimeout = setTimeout(() => {
+    if (callState === 'calling') {
+      send('call-cancel', { calleeId: callPeer });
+      callState = 'idle'; callPeer = null;
+      showOverlay(null);
+    }
+  }, 45_000);
+}
+
 $('btn-cancel').addEventListener('click', () => {
   if (callState !== 'calling') return;
+  clearTimeout(callTimeout);
   send('call-cancel', { calleeId: callPeer });
   callState = 'idle'; callPeer = null;
   showOverlay(null);
@@ -251,10 +272,21 @@ $('btn-hangup-callee').addEventListener('click', hangup);
 // ── Signaling events ───────────────────────────────────────────────────────
 function wireSignaling() {
   on('auth-ok', async ({ userId, name, avatar }) => {
+    const isReconnect = myUserId !== null;
     myUserId = userId;
     $('user-name').textContent = name;
     $('user-avatar').src = avatar || '';
-    // JS WebSocket переподключился — сообщаем сервису чтобы не конкурировал
+
+    // При переподключении WS сбрасываем незавершённые состояния звонка.
+    // 'active' не трогаем — WebRTC может пережить разрыв сигнального канала.
+    if (isReconnect && (callState === 'calling' || callState === 'receiving')) {
+      if (callState === 'calling') send('call-cancel', { calleeId: callPeer });
+      clearTimeout(callTimeout);
+      callState = 'idle'; callPeer = null;
+      showOverlay(null);
+      cancelCallNotification();
+    }
+
     if (Capacitor.isNativePlatform()) {
       CallNotification.setJsWsActive({ active: true }).catch(() => {});
     }
@@ -272,7 +304,7 @@ function wireSignaling() {
           $('caller-name').textContent = pending.callerName || '';
           $('caller-avatar').src = pending.callerAvatar || '';
           showOverlay('overlay-incoming');
-          showCallNotification(pending.callerName || ''); // ringtone + уведомление
+          showCallNotification(pending.callerName || '');
         }
       } catch (_) {}
     }
@@ -311,12 +343,14 @@ function wireSignaling() {
 
   on('call-accepted', () => {
     if (callState !== 'calling') return;
+    clearTimeout(callTimeout);
     callState = 'active';
     showOverlay('overlay-caller');
   });
 
   on('call-rejected', () => {
     if (callState === 'calling') {
+      clearTimeout(callTimeout);
       callState = 'idle'; callPeer = null;
       showOverlay(null);
     }
@@ -332,23 +366,8 @@ function wireSignaling() {
 }
 
 // ── Map marker → call user ─────────────────────────────────────────────────
-setOnMarkerClick((userId, userName) => {
-  if (callState !== 'idle' || userId === myUserId) return;
-  callState = 'calling';
-  callPeer = userId;
-  $('callee-name').textContent = userName;
-  showOverlay('overlay-calling');
-  send('call-request', { calleeId: userId });
-});
-
-window.__callUser = (userId, userName) => {
-  if (callState !== 'idle' || userId === myUserId) return;
-  callState = 'calling';
-  callPeer = userId;
-  $('callee-name').textContent = userName;
-  showOverlay('overlay-calling');
-  send('call-request', { calleeId: userId });
-};
+setOnMarkerClick((userId, userName) => startCall(userId, userName));
+window.__callUser = (userId, userName) => startCall(userId, userName);
 
 // ── Start app ──────────────────────────────────────────────────────────────
 async function startApp(token) {
