@@ -172,7 +172,7 @@ wss.on('connection', (ws) => {
             visible: prev?.visible ?? false,
           });
           ws.send(JSON.stringify({ type: 'auth-ok', data: { userId, name: payload.name, avatar: payload.avatar } }));
-          ws.send(JSON.stringify({ type: 'users-list', data: visibleUsers() }));
+          ws.send(JSON.stringify({ type: 'users-list', data: visibleUsers().filter(u => u.id !== userId) }));
         } catch {
           ws.send(JSON.stringify({ type: 'auth-error', data: {} }));
         }
