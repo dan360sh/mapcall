@@ -169,7 +169,7 @@ wss.on('connection', (ws) => {
             ws,
             lat: prev?.lat ?? null,
             lng: prev?.lng ?? null,
-            visible: prev?.visible ?? false,
+            visible: false, // reset so client's toggle-visible:true triggers user-appeared broadcast
           });
           ws.send(JSON.stringify({ type: 'auth-ok', data: { userId, name: payload.name, avatar: payload.avatar } }));
           ws.send(JSON.stringify({ type: 'users-list', data: visibleUsers().filter(u => u.id !== userId) }));
