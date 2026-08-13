@@ -371,12 +371,17 @@ setOnMarkerClick((userId, userName) => startCall(userId, userName));
 window.__callUser = (userId, userName) => startCall(userId, userName);
 
 // ── Start app ──────────────────────────────────────────────────────────────
+let signalingWired = false;
+
 async function startApp(token) {
   showScreen('screen-map');
   applyVisibleUI();
   setupCallNotifications();
-  wireSignaling();
-  initCall({ onHangup: hangup });
+  if (!signalingWired) {
+    wireSignaling();
+    initCall({ onHangup: hangup });
+    signalingWired = true;
+  }
 
   await initMap();
   startGpsWatch();

@@ -28,10 +28,12 @@ export async function connect(token) {
       (handlers[msg.type] || []).forEach(cb => cb(msg.data));
     };
 
-    ws.onclose = (e) => {
+    ws.onclose = ((closedWs) => (e) => {
       console.log('[WS] closed code=' + e.code + ' reason=' + e.reason);
-      if (savedToken) setTimeout(() => connect(savedToken), 3000);
-    };
+      if (savedToken) setTimeout(() => {
+        if (ws === closedWs) connect(savedToken);
+      }, 3000);
+    })(ws);
   });
 }
 
