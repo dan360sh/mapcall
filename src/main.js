@@ -194,6 +194,8 @@ async function startGpsWatch() {
 
       myLat = latitude;
       myLng = longitude;
+      localStorage.setItem('mapcall_last_lat', String(latitude));
+      localStorage.setItem('mapcall_last_lng', String(longitude));
       showMyMarker(myLat, myLng);
       updateCoordsDisplay(myLat, myLng);
 
@@ -214,6 +216,7 @@ async function startGpsWatch() {
 $('btn-accept').addEventListener('click', () => {
   if (callState !== 'receiving') return;
   callState = 'active';
+  cancelCallNotification();
   acceptCall(callPeer);
   showOverlay('overlay-callee');
 });
