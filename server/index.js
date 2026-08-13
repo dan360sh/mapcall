@@ -255,7 +255,7 @@ wss.on('connection', (ws) => {
         break;
 
       case 'get-users':
-        ws.send(JSON.stringify({ type: 'users-list', data: visibleUsers() }));
+        ws.send(JSON.stringify({ type: 'users-list', data: visibleUsers().filter(u => u.id !== userId) }));
         break;
     }
   });
