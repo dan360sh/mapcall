@@ -279,8 +279,9 @@ function wireSignaling() {
 
     // При переподключении WS сбрасываем незавершённые состояния звонка.
     // 'active' не трогаем — WebRTC может пережить разрыв сигнального канала.
-    if (isReconnect && (callState === 'calling' || callState === 'receiving')) {
+    if (isReconnect && callState !== 'idle') {
       if (callState === 'calling') send('call-cancel', { calleeId: callPeer });
+      if (callState === 'active') endCall();
       clearTimeout(callTimeout);
       callState = 'idle'; callPeer = null;
       showOverlay(null);
