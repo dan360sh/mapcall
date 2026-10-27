@@ -60,7 +60,8 @@ function createAuthRouter({ config, upsertUser }) {
     const configured = () => settings.clientId && settings.clientSecret && settings.redirectUri;
 
     router.get(`/auth/${name}`, (_req, res) => {
-      if (!configured()) return res.status(503).send(`${name} OAuth is not configured`);
+      // Возвращаем в приложение через callback, чтобы попап закрылся и показалась понятная ошибка
+      if (!configured()) return redirectToClient(res, { error: 'not_configured' });
       const state = jwt.sign({ provider: name, nonce: crypto.randomUUID() }, jwtSecret, { expiresIn: STATE_TTL });
       const params = new URLSearchParams({
         response_type: 'code',

@@ -38,15 +38,18 @@ function showLoginError(text = 'Ошибка авторизации. Попро�
   el.classList.remove('hidden');
 }
 
+const LOGIN_ERRORS = {
+  popup_blocked:  'Браузер заблокировал окно входа. Разрешите всплывающие окна.',
+  not_configured: 'Этот способ входа пока недоступен. Войдите через другой.',
+};
+
 async function login(getTokenFn) {
   $('login-error').classList.add('hidden');
   try {
     startApp(await getTokenFn());
   } catch (err) {
     if (err.message === 'cancelled' || err.message === 'superseded') return;
-    showLoginError(err.message === 'popup_blocked'
-      ? 'Браузер заблокировал окно входа. Разрешите всплывающие окна.'
-      : undefined);
+    showLoginError(LOGIN_ERRORS[err.message]);
   }
 }
 

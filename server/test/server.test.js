@@ -69,7 +69,7 @@ async function login(srv, name) {
   return { ...c, id: ok.userId };
 }
 
-test('HTTP: гостевой вход валидирует имя, OAuth без настроек отвечает 503', async (t) => {
+test('HTTP: гостевой вход валидирует имя, OAuth без настроек возвращает в приложение с ошибкой', async (t) => {
   const srv = await start();
   t.after(() => stop(srv));
 
@@ -79,7 +79,8 @@ test('HTTP: гостевой вход валидирует имя, OAuth без 
   assert.equal(bad.status, 400);
 
   const r = await fetch(`${srv.http}/auth/yandex`, { redirect: 'manual' });
-  assert.equal(r.status, 503);
+  assert.equal(r.status, 302);
+  assert.equal(r.headers.get('location'), 'http://client.test/callback.html#error=not_configured');
 });
 
 test('OAuth callback с поддельным state редиректит с ошибкой во fragment', async (t) => {
