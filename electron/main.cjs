@@ -1,11 +1,10 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
 const isDev = process.env.NODE_ENV === 'development';
 
 // Single-instance lock — prevents multiple windows / tray icons
-const gotLock = app.requestSingleInstanceLock();
-if (!gotLock) app.quit();
+if (!app.requestSingleInstanceLock()) app.quit();
 
 let mainWin = null;
 
@@ -23,6 +22,13 @@ function createWindow() {
     },
   });
 
+  // Попапы разрешены только для OAuth (/auth/...), остальное — в системный браузер
+  mainWin.webContents.setWindowOpenHandler(({ url }) => {
+    if (isOAuthStart(url)) return { action: 'allow' };
+    if (/^https?:/i.test(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
   if (isDev) {
     mainWin.loadURL('http://localhost:5173');
     mainWin.webContents.openDevTools();
@@ -33,31 +39,35 @@ function createWindow() {
   mainWin.on('closed', () => { mainWin = null; });
 }
 
-// Intercept navigation in ALL child windows (OAuth popups).
-// When the popup is redirected to the callback URL, extract the token
-// and forward it to the main window via IPC (works in both dev and prod).
+function isOAuthStart(url) {
+  try { return /^\/auth\/(yandex|google)$/.test(new URL(url).pathname); } catch { return false; }
+}
+
+// Сервер редиректит попап на <CLIENT_URL>/callback.html#token=... —
+// перехватываем этот редирект и передаём результат в главное окно по IPC
+// (в prod главное окно открыто с file://, и postMessage туда не дойдёт).
+function parseAuthCallback(url) {
+  let parsed;
+  try { parsed = new URL(url); } catch { return null; }
+  if (!parsed.pathname.endsWith('/callback.html')) return null;
+  const params = new URLSearchParams(parsed.hash.slice(1));
+  const token = params.get('token');
+  const error = params.get('error');
+  return token || error ? { token, error } : null;
+}
+
 app.on('web-contents-created', (_e, contents) => {
   contents.on('will-redirect', (event, url) => {
-    let parsed;
-    try { parsed = new URL(url); } catch { return; }
-
-    const token = parsed.searchParams.get('token');
-    const error = parsed.searchParams.get('error');
-
-    if (token || error) {
-      event.preventDefault();
-      if (mainWin) {
-        mainWin.webContents.send('auth-result', { token, error });
-      }
-      // Close the OAuth popup
-      if (!contents.isDestroyed()) contents.close();
-    }
+    if (mainWin && contents === mainWin.webContents) return;
+    const result = parseAuthCallback(url);
+    if (!result) return;
+    event.preventDefault();
+    mainWin?.webContents.send('auth-result', result);
+    if (!contents.isDestroyed()) contents.close();
   });
 });
 
 app.whenReady().then(() => {
-  ipcMain.handle('get-platform', () => process.platform);
-
   createWindow();
 
   app.on('activate', () => {

@@ -1,16 +1,26 @@
-// Joystick UI — 5 buttons: up, down, left, right, forward
-// Draggable via the handle strip at the top
+// Джойстик звонящего: 5 кнопок (вверх, вниз, влево, вправо, вперёд),
+// перетаскивается за полоску сверху.
+//
+// Обработчики DOM вешаются один раз; setJoystickHandler(fn) включает
+// отправку событий, setJoystickHandler(null) — выключает.
 
-let onPressCb = null;
+let onPress = null;
+let initialized = false;
 
-export function initJoystick(onPress) {
-  onPressCb = onPress;
+export function setJoystickHandler(handler) {
+  init();
+  onPress = handler;
+  if (!handler) document.querySelectorAll('.joy.pressed').forEach((b) => b.classList.remove('pressed'));
+}
 
-  document.querySelectorAll('.joy').forEach(btn => {
+function init() {
+  if (initialized) return;
+  initialized = true;
+
+  document.querySelectorAll('.joy').forEach((btn) => {
     btn.addEventListener('pointerdown', handleDown);
-    btn.addEventListener('pointerup', handleUp);
-    btn.addEventListener('pointerleave', handleUp);
-    btn.addEventListener('contextmenu', e => e.preventDefault());
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => btn.addEventListener(ev, handleUp));
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
   });
 
   const wrap = document.querySelector('.joystick-wrap');
@@ -18,22 +28,12 @@ export function initJoystick(onPress) {
   if (wrap && handle) initDrag(wrap, handle);
 }
 
-export function destroyJoystick() {
-  document.querySelectorAll('.joy').forEach(btn => {
-    btn.removeEventListener('pointerdown', handleDown);
-    btn.removeEventListener('pointerup', handleUp);
-    btn.removeEventListener('pointerleave', handleUp);
-    btn.classList.remove('pressed');
-  });
-  onPressCb = null;
-}
-
 function handleDown(e) {
   e.preventDefault();
   const btn = e.currentTarget;
-  if (btn.classList.contains('pressed')) return;
+  if (!onPress || btn.classList.contains('pressed')) return;
   btn.classList.add('pressed');
-  onPressCb?.(btn.dataset.dir);
+  onPress(btn.dataset.dir);
 }
 
 function handleUp(e) {
@@ -41,43 +41,31 @@ function handleUp(e) {
 }
 
 function initDrag(wrap, handle) {
-  let dragging = false;
-  let startX, startY, origLeft, origTop;
+  let drag = null; // { startX, startY, origLeft, origTop }
 
   handle.addEventListener('pointerdown', (e) => {
-    dragging = true;
     handle.setPointerCapture(e.pointerId);
-
-    // Конвертируем текущую позицию в left/top чтобы убрать bottom+transform
+    // Переводим позицию в left/top, чтобы убрать bottom + transform из CSS
     const rect = wrap.getBoundingClientRect();
-    wrap.style.left   = rect.left + 'px';
-    wrap.style.top    = rect.top  + 'px';
-    wrap.style.bottom = 'auto';
-    wrap.style.transform = 'none';
-
-    startX = e.clientX;
-    startY = e.clientY;
-    origLeft = rect.left;
-    origTop  = rect.top;
+    Object.assign(wrap.style, { left: `${rect.left}px`, top: `${rect.top}px`, bottom: 'auto', transform: 'none' });
+    drag = { startX: e.clientX, startY: e.clientY, origLeft: rect.left, origTop: rect.top };
     e.preventDefault();
   });
 
   handle.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-
-    // Не выходить за края экрана
-    const W = window.innerWidth;
-    const H = window.innerHeight;
-    const wRect = wrap.getBoundingClientRect();
-    const newLeft = Math.max(0, Math.min(W - wRect.width,  origLeft + dx));
-    const newTop  = Math.max(0, Math.min(H - wRect.height, origTop  + dy));
-
-    wrap.style.left = newLeft + 'px';
-    wrap.style.top  = newTop  + 'px';
+    if (!drag) return;
+    const { width, height } = wrap.getBoundingClientRect();
+    const left = clamp(drag.origLeft + e.clientX - drag.startX, 0, window.innerWidth - width);
+    const top  = clamp(drag.origTop  + e.clientY - drag.startY, 0, window.innerHeight - height);
+    wrap.style.left = `${left}px`;
+    wrap.style.top  = `${top}px`;
   });
 
-  handle.addEventListener('pointerup',     () => { dragging = false; });
-  handle.addEventListener('pointercancel', () => { dragging = false; });
+  const stop = () => { drag = null; };
+  handle.addEventListener('pointerup', stop);
+  handle.addEventListener('pointercancel', stop);
+}
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
 }

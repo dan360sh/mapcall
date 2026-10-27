@@ -8,7 +8,10 @@ html, body {
   color: #fff;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
+input, textarea { user-select: text; -webkit-user-select: text; }
 
 /* ── Screens ──────────────────────────────────────────────────────────────── */
 .screen {
@@ -96,6 +99,7 @@ html, body {
 
 .guest-form {
   display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
@@ -114,7 +118,7 @@ html, body {
 .guest-input:focus { border-color: rgba(255,255,255,.4); }
 
 .oauth-guest {
-  width: auto;
+  width: 100%;
   padding: 13px 20px;
   background: rgba(255,255,255,.12);
   color: #fff;
@@ -172,10 +176,55 @@ html, body {
 
 .map-bottom {
   position: absolute;
-  bottom: 32px;
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.map-bottom > * { pointer-events: all; }
+
+/* ── Coordinate labels ────────────────────────────────────────────────────── */
+.map-coords {
+  font-size: .73rem;
+  color: rgba(255,255,255,.65);
+  background: rgba(15,15,30,.72);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-variant-numeric: tabular-nums;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.08);
+  cursor: pointer;
+  transition: color .15s;
+  white-space: nowrap;
+}
+.map-coords:hover { color: rgba(255,255,255,.9); }
+
+/* ── Find nearest button ──────────────────────────────────────────────────── */
+.find-nearest-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: rgba(15,15,30,.75);
+  color: rgba(255,255,255,.8);
+  border: 1.5px solid rgba(255,255,255,.15);
+  border-radius: 50px;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  transition: all .2s;
+  white-space: nowrap;
+}
+.find-nearest-btn:active { opacity: .8; transform: scale(.96); }
+.find-nearest-btn.has-nearest {
+  border-color: rgba(74,144,226,.4);
+  color: #fff;
 }
 
 .toggle-btn {
@@ -196,6 +245,11 @@ html, body {
 .toggle-btn.active {
   background: rgba(74,144,226,.88);
   border-color: #4a90e2;
+}
+.toggle-btn.geo-denied {
+  background: rgba(255,140,30,.15);
+  border-color: rgba(255,140,30,.45);
+  color: #ffaa44;
 }
 .toggle-icon { font-size: 1.1rem; }
 
@@ -418,7 +472,7 @@ html, body {
 /* ── "Где я" button ────────────────────────────────────────────────────────── */
 .locate-btn {
   position: absolute;
-  bottom: 100px;
+  bottom: 210px;
   right: 14px;
   z-index: 100;
   width: 44px;
@@ -438,37 +492,65 @@ html, body {
 }
 .locate-btn:active { transform: scale(.88); background: rgba(74,144,226,.3); }
 
-/* ── Coordinates panel ────────────────────────────────────────────────────── */
-.coords-panel {
-  position: absolute;
-  bottom: 32px;
-  left: 14px;
-  z-index: 100;
+/* ── Loading overlay ──────────────────────────────────────────────────────── */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  background: rgba(15,15,30,.82);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 10px;
-  padding: 6px 10px;
-  backdrop-filter: blur(12px);
-  font-size: .78rem;
-  font-weight: 500;
-  color: rgba(255,255,255,.85);
-  font-variant-numeric: tabular-nums;
+  justify-content: center;
+  gap: 24px;
+  transition: opacity .4s ease;
 }
-
-.btn-copy-coords {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,.5);
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 0 2px;
-  line-height: 1;
-  transition: color .15s;
+.loading-overlay.fade-out { opacity: 0; pointer-events: none; }
+.load-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(255,255,255,.15);
+  border-top-color: #4facfe;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
 }
-.btn-copy-coords:hover { color: #4a90e2; }
+.load-text {
+  color: rgba(255,255,255,.4);
+  font-size: .9rem;
+  letter-spacing: .06em;
+}
 
 /* ── Utilities ────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
+
+/* ── Copy feedback ────────────────────────────────────────────────────────── */
+.map-coords.copied { color: #4a90e2; }
+
+/* ── Balloon (Yandex Maps) ────────────────────────────────────────────────── */
+.balloon { text-align: center; padding: 8px; color: #222; }
+.balloon-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  object-fit: cover; margin: 0 auto 6px; display: block;
+}
+.balloon-name { font-weight: 700; }
+.balloon-busy { margin-top: 8px; color: #e53935; font-weight: 600; }
+.balloon-call {
+  margin-top: 8px; padding: 6px 14px;
+  background: #4a90e2; color: #fff; border: none; border-radius: 20px;
+  cursor: pointer; font-weight: 600;
+}
+
+/* ── Connection status & toast ────────────────────────────────────────────── */
+.conn-status {
+  position: fixed; top: 0; left: 0; right: 0;
+  padding: 6px 12px; text-align: center; font-size: .85rem;
+  background: rgba(229, 57, 53, .92); color: #fff;
+  z-index: 700;
+}
+.toast {
+  position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%);
+  max-width: min(92vw, 420px);
+  padding: 10px 18px; border-radius: 20px;
+  background: rgba(20, 20, 40, .92); color: #fff; font-size: .9rem; text-align: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,.35);
+  z-index: 700; pointer-events: none;
+}

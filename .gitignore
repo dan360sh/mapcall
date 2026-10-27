@@ -4,3 +4,8 @@ release/
 android/
 .env
 *.env.local
+
+# Отладочные артефакты
+*.log
+browser*.png
+.playwright-mcp/

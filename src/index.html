@@ -57,21 +57,24 @@
       <button id="btn-logout" class="btn-logout" title="Выйти">✕</button>
     </div>
 
-    <!-- "Где я" button (bottom-right) -->
+    <!-- "Где я" button (right side) -->
     <button id="btn-locate-me" class="locate-btn" title="Где я">⊕</button>
 
-    <!-- Coordinates panel (bottom-left) -->
-    <div id="coords-panel" class="coords-panel hidden">
-      <span id="coords-text"></span>
-      <button id="btn-copy-coords" class="btn-copy-coords" title="Копировать">⎘</button>
-    </div>
-
-    <!-- Show-on-map toggle (bottom-center) -->
+    <!-- Bottom center panel -->
     <div class="map-bottom">
+      <div id="focus-coords" class="map-coords hidden" title="Нажмите чтобы скопировать">
+        <span id="focus-coords-text"></span>
+      </div>
       <button id="btn-toggle-visible" class="toggle-btn">
         <span class="toggle-icon">👁</span>
         <span id="toggle-label">Показаться на карте</span>
       </button>
+      <button id="btn-find-nearest" class="find-nearest-btn">
+        🎯 <span id="nearest-btn-label">Ближайший человек</span>
+      </button>
+      <div id="nearest-coords" class="map-coords hidden">
+        <span id="nearest-coords-text"></span>
+      </div>
     </div>
   </div>
 
@@ -100,7 +103,7 @@
 
   <!-- ── Active call: CALLER view (video + joystick) ──────────────────────── -->
   <div id="overlay-caller" class="overlay hidden call-fullscreen">
-    <video id="remote-video" autoplay playsinline muted="false"></video>
+    <video id="remote-video" autoplay playsinline muted></video>
 
     <div class="joystick-wrap">
       <div class="joystick-handle">⠿⠿⠿</div>
@@ -136,6 +139,26 @@
       <span class="callee-status">📞 Звонок активен</span>
       <button id="btn-hangup-callee" class="btn-hangup-sm">Завершить</button>
     </div>
+  </div>
+
+  <!-- Connection status & toast -->
+  <div id="conn-status" class="conn-status hidden">Нет связи с сервером — переподключение…</div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- Loading overlay -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <svg width="64" height="64" viewBox="0 0 56 56" fill="none">
+      <circle cx="28" cy="28" r="28" fill="url(#gl)"/>
+      <path d="M28 14C21.4 14 16 19.4 16 26c0 9 12 22 12 22s12-13 12-22c0-6.6-5.4-12-12-12zm0 16.5A4.5 4.5 0 1128 22a4.5 4.5 0 010 8.5z" fill="white"/>
+      <defs>
+        <linearGradient id="gl" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#4facfe"/>
+          <stop offset="1" stop-color="#00f2fe"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="load-spinner"></div>
+    <p class="load-text">Загрузка...</p>
   </div>
 
   <script type="module" src="main.js"></script>

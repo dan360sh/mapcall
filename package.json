@@ -15,16 +15,19 @@
     "android:build": "npm run build && npx cap sync android"
   },
   "devDependencies": {
-    "vite": "^5.4.0",
+    "concurrently": "^8.2.0",
+    "cross-env": "^7.0.3",
     "electron": "^31.0.0",
     "electron-builder": "^25.0.0",
-    "wait-on": "^7.2.0",
-    "concurrently": "^8.2.0",
-    "cross-env": "^7.0.3"
+    "vite": "^5.4.0",
+    "wait-on": "^7.2.0"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
+    "@capacitor/app": "^6.0.3",
     "@capacitor/cli": "^6.0.0",
-    "@capacitor/core": "^6.0.0"
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/geolocation": "^6.1.1",
+    "@capacitor/local-notifications": "^6.1.3"
   }
 }
